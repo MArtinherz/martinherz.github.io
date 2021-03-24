@@ -62,7 +62,7 @@
 
   <article class="article">
     
-    <span class="article-duration">6 min read</span>
+    <span class="article-duration">10 min read</span>
     
 
     <h1 class="article-title">An attempt to predict the Madness</h1>
@@ -121,7 +121,7 @@
 <pre><code>## The following objects are masked from &#39;package:base&#39;:
 ## 
 ##     as.Date, as.Date.numeric</code></pre>
-<p>Let’s load in some games data.</p>
+<p>Let’s load in games data from my lovely class of all college basketball games over the last six seasons.</p>
 <pre class="r"><code>games &lt;- read_csv(&#39;~/R/JOMC491/Data/updcbblogs1521.csv&#39;)</code></pre>
 <pre><code>## Parsed with column specification:
 ## cols(
@@ -172,6 +172,7 @@
   ) %&gt;%
   mutate(Outcome = as.factor(Outcome))</code></pre>
 <p>Our four factors were Team EFG% or team effective field goal rate, which puts equal weight on twos and threes to show how well a team shoots from the field with threes getting a 50% boost since those shots have 50% more value than a two. The next three were free throw rate or how often a team gets to the line, offensive rebound rate or how well our team does on the offensive glass and lastly our turnover rate.</p>
+<p>Another addition is that we were taking the cumulative mean of our team and applying that to a rolling mean over the last 10 games so the model used recent performance to predict who would go furthest in the tournament.</p>
 <pre class="r"><code>selectedgames &lt;- games %&gt;% select(Season, Team, Date, Opponent, Outcome, RollyTeamEFGRate, RollyTeamFTRate, RollyTeamTORate, RollyTeamOReboundRate, RollyOffensiveRating, RollyDefensiveRating, RollyDifference) %&gt;% na.omit()
 
 opponentgames &lt;- selectedgames %&gt;% select(-Opponent) %&gt;% rename(Opponent = Team, RollyOppOffRating = RollyOffensiveRating, RollyOppDefRating = RollyDefensiveRating, RollyOppDifference = RollyDifference, RollyOpponentEFG = RollyTeamEFGRate, RollyOppoFTRate = RollyTeamFTRate, RollyOppoTORate = RollyTeamTORate, RollyOppoOReboundRAte = RollyTeamOReboundRate)
@@ -183,18 +184,152 @@ bothsides &lt;- games %&gt;%
 <p>The idea here is pretty simple. Our match ups are going to be on the team’s four factors, offense only, along with their offensive and defensing rating. The difference is the +/- of a team per 100 possessions so teams with higher +/- are usually good on offense and defense. Sometimes, that can mean that one team is extremely good at one part such as Iowa on offense and average on the defensive end.</p>
 <p>There rating is combined with the four factors to see if it adds to predicting wins or not.</p>
 <p>The Model</p>
-<p>The Training and Testing Data</p>
+<p>The Training and Testing Data for our Model</p>
 <pre class="r"><code>set.seed(1234)
 log_split &lt;- initial_split(bothsides, prop = .8)
 
 log_train &lt;- training(log_split) %&gt;% select(Team, Opponent, Date, Season, Outcome, RollyOffensiveRating, RollyOppOffRating, RollyOppDefRating , RollyDefensiveRating, RollyOppDifference , RollyDifference, RollyOpponentEFG , RollyTeamEFGRate, RollyOppoFTRate , RollyTeamFTRate, RollyOppoTORate , RollyTeamTORate, RollyOppoOReboundRAte , RollyTeamOReboundRate ) %&gt;% na.omit()
 
 log_test &lt;- testing(log_split) %&gt;% select(Team, Opponent, Date, Season, Outcome, RollyOffensiveRating, RollyOppOffRating, RollyOppDefRating , RollyDefensiveRating, RollyOppDifference , RollyDifference, RollyOpponentEFG , RollyTeamEFGRate, RollyOppoFTRate , RollyTeamFTRate, RollyOppoTORate , RollyTeamTORate, RollyOppoOReboundRAte , RollyTeamOReboundRate ) %&gt;% na.omit()</code></pre>
+<p>The Model</p>
+<pre class="r"><code>log_recipe &lt;- 
+  recipe(Outcome ~ ., data = log_train) %&gt;% 
+  update_role(Team, Opponent, Date, Season, new_role = &quot;ID&quot;) %&gt;%
+  step_dummy(all_nominal(), -all_outcomes()) %&gt;% 
+  step_normalize(all_predictors())
+
+summary(log_recipe)</code></pre>
+<pre><code>## # A tibble: 19 x 4
+##    variable              type    role      source  
+##    &lt;chr&gt;                 &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
+##  1 Team                  nominal ID        original
+##  2 Opponent              nominal ID        original
+##  3 Date                  date    ID        original
+##  4 Season                nominal ID        original
+##  5 RollyOffensiveRating  numeric predictor original
+##  6 RollyOppOffRating     numeric predictor original
+##  7 RollyOppDefRating     numeric predictor original
+##  8 RollyDefensiveRating  numeric predictor original
+##  9 RollyOppDifference    numeric predictor original
+## 10 RollyDifference       numeric predictor original
+## 11 RollyOpponentEFG      numeric predictor original
+## 12 RollyTeamEFGRate      numeric predictor original
+## 13 RollyOppoFTRate       numeric predictor original
+## 14 RollyTeamFTRate       numeric predictor original
+## 15 RollyOppoTORate       numeric predictor original
+## 16 RollyTeamTORate       numeric predictor original
+## 17 RollyOppoOReboundRAte numeric predictor original
+## 18 RollyTeamOReboundRate numeric predictor original
+## 19 Outcome               nominal outcome   original</code></pre>
+<p>This is our recipe for the model where we predict the outcome with our chosen metrics and normalize all numbers to be on the same level.</p>
+<pre class="r"><code>log_mod &lt;- 
+  rand_forest() %&gt;% 
+  set_engine(&quot;ranger&quot;) %&gt;%
+  set_mode(&quot;classification&quot;)
+
+log_workflow &lt;- 
+  workflow() %&gt;% 
+  add_model(log_mod) %&gt;% 
+  add_recipe(log_recipe)</code></pre>
+<p>After that, our model uses random forests to give a probability on game outcomes with W or L. I chose random forests because the model tries to pick decision trees that aren’t correlated with one another and the model is not as mean to my computer.</p>
+<p>That creates our workflow before creating the model.</p>
+<pre class="r"><code>log_fit &lt;- 
+  log_workflow %&gt;% 
+  fit(data = log_train)</code></pre>
+<p>In three lines of code, our model is created.</p>
+<pre class="r"><code>trainpredict &lt;- log_fit %&gt;% predict(new_data = log_train) %&gt;%
+  bind_cols(log_train)
+
+metrics(trainpredict, Outcome, .pred_class)</code></pre>
+<pre><code>## # A tibble: 2 x 3
+##   .metric  .estimator .estimate
+##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+## 1 accuracy binary         0.947
+## 2 kap      binary         0.893</code></pre>
+<p>93% is pretty damn high, a little too high even and that number goes down. By a lot.</p>
+<pre class="r"><code>testpredict &lt;- log_fit %&gt;% predict(new_data = log_test) %&gt;%
+  bind_cols(log_test)
+
+
+metrics(testpredict, Outcome, .pred_class)</code></pre>
+<pre><code>## # A tibble: 2 x 3
+##   .metric  .estimator .estimate
+##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+## 1 accuracy binary         0.661
+## 2 kap      binary         0.321</code></pre>
 <p>The shortcomings within this model stem from how overfitted the model is compared to the test data. Our model’s accuracy with the training data is in the lower 90s at 93 % for accuracy. If the model was this accurate, I would have my best bracket performance ever.</p>
-<p>Instead, the model accuracy drops to about 69%. That’s still pretty good in predicting outcomes of games but shows that there are prominent issues with this model. There’s a very high chance that one metric is correlated really strongly with any metric but I continued on to see what happens next.</p>
-<p>#Put one region that the model surprisingly did well in (the Midwest)</p>
-<p>#snapshot of our bracket</p>
-<p>At least one thing this model got right is Gonzaga winning the whole thing.</p>
+<p>Instead, the model accuracy drops to about 69%. That’s still pretty good in predicting outcomes of games but shows that there are prominent issues with this model.</p>
+<p>There’s a very high chance that one metric is correlated really strongly with any metric but I continued on to see what happens next. Anyways, we continued into the final part and that is the simulation.</p>
+<p>The model was put to the test day one with the South region.</p>
+<pre class="r"><code>south &lt;- tibble(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;Hartford&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;North Carolina&quot;,
+  Opponent=&quot;Wisconsin&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Villanova&quot;,
+  Opponent=&quot;Winthrop&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Purdue&quot;,
+  Opponent=&quot;North Texas&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Texas Tech&quot;,
+  Opponent=&quot;Utah State&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Arkansas&quot;,
+  Opponent=&quot;Colgate&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Florida&quot;,
+  Opponent=&quot;Virginia Tech&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Ohio State&quot;,
+  Opponent=&quot;Oral Roberts&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) </code></pre>
+<pre class="r"><code>south &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>south &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(south, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+southregional &lt;- log_fit %&gt;% predict(new_data = south) %&gt;%
+  bind_cols(south) 
+
+southregional &lt;- log_fit %&gt;% predict(new_data = southregional, type=&quot;prob&quot;) %&gt;%
+  bind_cols(southregional)
+
+southregional</code></pre>
+<pre><code>## # A tibble: 8 x 21
+##   .pred_L .pred_W .pred_class Team  Opponent RollyOpponentEFG RollyOppoFTRate
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt; &lt;chr&gt;               &lt;dbl&gt;           &lt;dbl&gt;
+## 1   0.495   0.505 W           Arka~ Colgate             0.579           0.260
+## 2   0.263   0.737 W           Bayl~ Hartford            0.497           0.229
+## 3   0.534   0.466 L           Purd~ North T~            0.558           0.221
+## 4   0.430   0.570 W           Ohio~ Oral Ro~            0.543           0.223
+## 5   0.582   0.418 L           Texa~ Utah St~            0.508           0.260
+## 6   0.560   0.440 L           Flor~ Virgini~            0.523           0.292
+## 7   0.459   0.541 W           Vill~ Winthrop            0.533           0.297
+## 8   0.559   0.441 L           Nort~ Wiscons~            0.504           0.243
+## # ... with 14 more variables: RollyOppoTORate &lt;dbl&gt;,
+## #   RollyOppoOReboundRAte &lt;dbl&gt;, RollyOppOffRating &lt;dbl&gt;,
+## #   RollyOppDefRating &lt;dbl&gt;, RollyOppDifference &lt;dbl&gt;, Season &lt;chr&gt;,
+## #   RollyTeamEFGRate &lt;dbl&gt;, RollyTeamFTRate &lt;dbl&gt;, RollyTeamTORate &lt;dbl&gt;,
+## #   RollyTeamOReboundRate &lt;dbl&gt;, RollyOffensiveRating &lt;dbl&gt;,
+## #   RollyDefensiveRating &lt;dbl&gt;, RollyDifference &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+<p>The South Region day one games all had probabilities between 40 to 60 percent for a win or loss except for Baylor. The model predicted Baylor would win with 73 percent confidence. One upset the model got right was North Texas shocking Purdue while also somewhat thinking that Oral Roberts had a reasonable chance at beating the Buckeyes.</p>
+<p>The model does some things right and does some things wrong. There is an obvious emphasis on offensive stats only as the model predicts who wins only on offense and the use of ratings helps muddy up the waters a bit.</p>
+<p>Still, there is legitimacy to using these numbers as the four factors, first used by Dean Oliver, are still good predicting at the final outcome of games.</p>
+<p>Now, my current bracket.</p>
+<p>Three of my Final Four teams are still alive with Gonzaga, Baylor and Loyola-Chicago.</p>
+<p>The national champion: Gonzaga over Baylor with a 59% chance at winning that game.</p>
+<p><img src="images/TopHalf.png" /></p>
+<p><img src="images/BottomHalf.png" /></p>
 
     </div>
   </article>
