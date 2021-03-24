@@ -62,7 +62,7 @@
 
   <article class="article">
     
-    <span class="article-duration">1 min read</span>
+    <span class="article-duration">6 min read</span>
     
 
     <h1 class="article-title">An attempt to predict the Madness</h1>
@@ -75,6 +75,8 @@
       
 
 
+<p>This past weekend has not been kind to many brackets. My bracket right now ranks in the 72.5 percentile after the first weekend, a shock after being last after day one.</p>
+<p>That doesn’t make me feel right but something is up when your bracket jumps from last to above the majority.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
 <pre><code>## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --</code></pre>
 <pre><code>## v ggplot2 3.3.2     v purrr   0.3.4
@@ -87,6 +89,38 @@
 <pre><code>## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(tidymodels)</code></pre>
+<pre><code>## Warning: package &#39;tidymodels&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## -- Attaching packages -------------------------------------- tidymodels 0.1.2 --</code></pre>
+<pre><code>## v broom     0.7.2      v recipes   0.1.15
+## v dials     0.0.9      v rsample   0.0.8 
+## v infer     0.5.4      v tune      0.1.2 
+## v modeldata 0.1.0      v workflows 0.2.1 
+## v parsnip   0.1.5      v yardstick 0.0.7</code></pre>
+<pre><code>## Warning: package &#39;broom&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;dials&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;infer&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;modeldata&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;parsnip&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;recipes&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;rsample&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;tune&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;workflows&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## -- Conflicts ----------------------------------------- tidymodels_conflicts() --
+## x scales::discard() masks purrr::discard()
+## x dplyr::filter()   masks stats::filter()
+## x recipes::fixed()  masks stringr::fixed()
+## x dplyr::lag()      masks stats::lag()
+## x yardstick::spec() masks readr::spec()
+## x recipes::step()   masks stats::step()</code></pre>
+<pre class="r"><code>library(zoo)</code></pre>
+<pre><code>## Warning: package &#39;zoo&#39; was built under R version 4.0.3</code></pre>
+<pre><code>## 
+## Attaching package: &#39;zoo&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     as.Date, as.Date.numeric</code></pre>
 <p>Let’s load in some games data.</p>
 <pre class="r"><code>games &lt;- read_csv(&#39;~/R/JOMC491/Data/updcbblogs1521.csv&#39;)</code></pre>
 <pre><code>## Parsed with column specification:
@@ -103,7 +137,64 @@
 ##   Team = col_character()
 ## )</code></pre>
 <pre><code>## See spec(...) for full column specifications.</code></pre>
-<p>An important part of basketball is shooting. Duh!</p>
+<p>Creating the Metrics</p>
+<p>I had a simple idea in generating my model. The four factors of basketball have become common to explain why and how a team does well. I wanted to capture that with a rolling average over the last 10 games and combining that to make a cumulative of all the rolling means as well.</p>
+<pre class="r"><code>games &lt;- games %&gt;% mutate(
+  Possessions = .5*(TeamFGA - TeamOffRebounds + TeamTurnovers + (.475 * TeamFTA)) + .5*(OpponentFGA - OpponentOffRebounds + OpponentTurnovers + (.475 * OpponentFTA)),
+  OffensiveRating = (TeamScore/Possessions)*100, 
+  DefensiveRating = (OpponentScore/Possessions)*100,
+  TeamEFGRate = ((Team3P * .5) + TeamFG)/(TeamFGA), #how effectively we shoot from the field
+  TeamFTRate = TeamFTA/Possessions, #how often we get to the line
+  TeamTORate = TeamTurnovers/Possessions, #how often we turnover
+  TeamOReboundRate = TeamOffRebounds/TeamTotalRebounds, #how well do we do the rebounds
+) %&gt;%
+  #By the Month
+  group_by(Team, Season) %&gt;% #cumulative of our rolling mean
+  mutate(RollyTeamEFGRate = rollmean(cummean(TeamEFGRate),k = 10, fill = TRUE, align = &#39;right&#39;), #how effectively we shoot from the field
+         RollyTeamFTRate = rollmean(cummean(TeamFTRate), k = 10, fill = TRUE, align = &#39;right&#39;), #how often we get to the line
+         RollyTeamTORate = rollmean(cummean(TeamTORate),  k = 10, fill = TRUE, align = &#39;right&#39;), #how often we turnover
+         RollyTeamOReboundRate = rollmean(cummean(TeamOReboundRate),  k = 10, fill = TRUE, align = &#39;right&#39;), #how well do we do the rebounds
+         RollyOffensiveRating = cummean(rollmean(OffensiveRating,  k = 10, fill = TRUE, align = &#39;right&#39;)), 
+         RollyDefensiveRating = cummean(rollmean(DefensiveRating, k = 10, fill = TRUE, align = &#39;right&#39;)),
+         RollyDifference = RollyOffensiveRating - RollyDefensiveRating) %&gt;%
+  #our offense
+  ungroup() %&gt;% 
+  mutate(
+    Location = case_when(
+      str_trim(HomeAway) == &quot;@&quot; ~ &quot;A&quot;,
+      str_trim(HomeAway) == &quot;N&quot; ~ &quot;N&quot;,
+      TRUE ~ &quot;H&quot;
+    ),
+    Outcome = case_when(
+      grepl(&quot;W&quot;, W_L) ~ &quot;W&quot;, 
+      grepl(&quot;L&quot;, W_L) ~ &quot;L&quot;
+    )
+  ) %&gt;%
+  mutate(Outcome = as.factor(Outcome))</code></pre>
+<p>Our four factors were Team EFG% or team effective field goal rate, which puts equal weight on twos and threes to show how well a team shoots from the field with threes getting a 50% boost since those shots have 50% more value than a two. The next three were free throw rate or how often a team gets to the line, offensive rebound rate or how well our team does on the offensive glass and lastly our turnover rate.</p>
+<pre class="r"><code>selectedgames &lt;- games %&gt;% select(Season, Team, Date, Opponent, Outcome, RollyTeamEFGRate, RollyTeamFTRate, RollyTeamTORate, RollyTeamOReboundRate, RollyOffensiveRating, RollyDefensiveRating, RollyDifference) %&gt;% na.omit()
+
+opponentgames &lt;- selectedgames %&gt;% select(-Opponent) %&gt;% rename(Opponent = Team, RollyOppOffRating = RollyOffensiveRating, RollyOppDefRating = RollyDefensiveRating, RollyOppDifference = RollyDifference, RollyOpponentEFG = RollyTeamEFGRate, RollyOppoFTRate = RollyTeamFTRate, RollyOppoTORate = RollyTeamTORate, RollyOppoOReboundRAte = RollyTeamOReboundRate)
+
+bothsides &lt;- games %&gt;% 
+  left_join(opponentgames, by=c(&quot;Opponent&quot;, &quot;Season&quot;, &quot;Date&quot;)) %&gt;%
+  rename(Outcome = Outcome.x) %&gt;%
+  filter(!is.na(OpponentSRS))</code></pre>
+<p>The idea here is pretty simple. Our match ups are going to be on the team’s four factors, offense only, along with their offensive and defensing rating. The difference is the +/- of a team per 100 possessions so teams with higher +/- are usually good on offense and defense. Sometimes, that can mean that one team is extremely good at one part such as Iowa on offense and average on the defensive end.</p>
+<p>There rating is combined with the four factors to see if it adds to predicting wins or not.</p>
+<p>The Model</p>
+<p>The Training and Testing Data</p>
+<pre class="r"><code>set.seed(1234)
+log_split &lt;- initial_split(bothsides, prop = .8)
+
+log_train &lt;- training(log_split) %&gt;% select(Team, Opponent, Date, Season, Outcome, RollyOffensiveRating, RollyOppOffRating, RollyOppDefRating , RollyDefensiveRating, RollyOppDifference , RollyDifference, RollyOpponentEFG , RollyTeamEFGRate, RollyOppoFTRate , RollyTeamFTRate, RollyOppoTORate , RollyTeamTORate, RollyOppoOReboundRAte , RollyTeamOReboundRate ) %&gt;% na.omit()
+
+log_test &lt;- testing(log_split) %&gt;% select(Team, Opponent, Date, Season, Outcome, RollyOffensiveRating, RollyOppOffRating, RollyOppDefRating , RollyDefensiveRating, RollyOppDifference , RollyDifference, RollyOpponentEFG , RollyTeamEFGRate, RollyOppoFTRate , RollyTeamFTRate, RollyOppoTORate , RollyTeamTORate, RollyOppoOReboundRAte , RollyTeamOReboundRate ) %&gt;% na.omit()</code></pre>
+<p>The shortcomings within this model stem from how overfitted the model is compared to the test data. Our model’s accuracy with the training data is in the lower 90s at 93 % for accuracy. If the model was this accurate, I would have my best bracket performance ever.</p>
+<p>Instead, the model accuracy drops to about 69%. That’s still pretty good in predicting outcomes of games but shows that there are prominent issues with this model. There’s a very high chance that one metric is correlated really strongly with any metric but I continued on to see what happens next.</p>
+<p>#Put one region that the model surprisingly did well in (the Midwest)</p>
+<p>#snapshot of our bracket</p>
+<p>At least one thing this model got right is Gonzaga winning the whole thing.</p>
 
     </div>
   </article>
