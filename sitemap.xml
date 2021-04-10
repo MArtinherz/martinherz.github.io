@@ -5,6 +5,9 @@
     <loc>/</loc>
     <lastmod>2021-04-09T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>/categories/</loc>
+    <lastmod>2021-04-09T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>/tags/machine-learning/</loc>
     <lastmod>2021-04-09T00:00:00+00:00</lastmod>
   </url><url>
@@ -17,6 +20,12 @@
     <loc>/tags/r/</loc>
     <lastmod>2021-04-09T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>/categories/r/</loc>
+    <lastmod>2021-04-09T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>/2021/04/09/reflecting-on-my-bracket/</loc>
+    <lastmod>2021-04-09T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>/2021/04/09/reflection-of-the-bracket/</loc>
     <lastmod>2021-04-09T00:00:00+00:00</lastmod>
   </url><url>
@@ -24,12 +33,6 @@
     <lastmod>2021-04-09T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/2021/03/22/an-attempt-to-predict-the-madness/</loc>
-    <lastmod>2021-03-22T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/categories/</loc>
-    <lastmod>2021-03-22T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/categories/r/</loc>
     <lastmod>2021-03-22T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/about/</loc>
