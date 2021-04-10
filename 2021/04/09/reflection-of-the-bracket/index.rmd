@@ -1,0 +1,29 @@
+---
+title: "Reflection of the Bracket"
+author: "Martin Herz"
+date: "2021-04-09"
+tags: ['R','March Madness', 'Machine Learning']
+
+---
+
+Well, the season's over. My bracket finished 7th in our pool and placed solidly in the 82nd percentile. That was a surprise given how the first day went where my bracket was in last place. The high placement for myself is due to having a Gonzaga-Baylor national championship or the two best teams all seasons all year.
+
+That may be an obvious pick but hey, millions of people did not pick the two best teams to make the national championship. Those people could be rightful, specifically the Big Ten.
+
+In the first round, upsets were everywhere. One that my model got right was 14-seed Abilene Christian upsetting 3-seed Texas, tipping the favor into ACU. One interesting part of my first round games was the love of the mid-major for the 6-11 match-ups. The model predicted all four mid-majors to win those games with six seeds San Diego St and BYU winning while 11 seeds Utah State and Drake pulling off the upset.
+
+Every single prediction was wrong in the 6-11 field. One particular part that stands out from that is the lack of adjustment to opponent's played since my model only used the offensive four factors. There was no adjustment made or a new offensive rating formed from those scores and an issue with the model.
+
+The model's four winners in the 6-11 field were blown out as well while the model was fairly confident in the opposing side's chances of winning. It gave Utah State a 58.2 percent chance at beating 6-seed Texas Tech, Tech won by 12 points and dominated the second half. The model gave similar odds to the rest of the match-ups and out of all the first round games, the least competitive were in the 6-11 field.
+
+Swing and a miss. The perceived strength of the 6 and 11s also directly influenced none of the three seeds making the Sweet 16.
+
+Another part of the issue with the model is the calculations themselves because I calculated free throw rate. I calculated free throw rate based on how often team gets to the line per possession and not per shot. That doesn't mean much in measuring offensive strength compared to getting to the line per shot.
+
+Luck. The model got it right with Purdue-North Texas, giving a slight edge to North Texas with a 53.4 percent chance of winning. The Mean Green scraped by with an overtime win while also not buying into 12-seed Winthrop upsetting 5-seed Villanova.
+
+From the bad comes the good, the four factors clearly were on to something within the college basketball world. Gonzaga and Baylor in the title game, Houston making the elite eight but those factors were not used properly. One thing to look forward while building another model with the factor is either developing an offensive rating and defensive rating from the factors for offense and defense.
+
+Despite the model shortcomings, this was the bracket I made this year. My second bracket was in the 69th percentile but had Illinois winning the national title. The model gave a slight edge to Loyola-Chicago over Illinois and liked the Ramblers' chances up to the Final Four(Those darn beavers!).
+
+

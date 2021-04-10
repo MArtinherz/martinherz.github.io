@@ -6,7 +6,17 @@
     <description>Recent content on A Hugo website</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 22 Mar 2021 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 09 Apr 2021 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Reflection of the Bracket</title>
+      <link>/2021/04/09/reflection-of-the-bracket/</link>
+      <pubDate>Fri, 09 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/04/09/reflection-of-the-bracket/</guid>
+      <description>Well, the season’s over. My bracket finished 7th in our pool and placed solidly in the 82nd percentile. That was a surprise given how the first day went where my bracket was in last place. The high placement for myself is due to having a Gonzaga-Baylor national championship or the two best teams all seasons all year.
+That may be an obvious pick but hey, millions of people did not pick the two best teams to make the national championship.</description>
+    </item>
+    
     <item>
       <title>An attempt to predict the Madness</title>
       <link>/2021/03/22/an-attempt-to-predict-the-madness/</link>
@@ -19,12 +29,12 @@ library(tidyverse)## -- Attaching packages ------------------------------------
     </item>
     
     <item>
-      <title>About</title>
+      <title>About Martin</title>
       <link>/about/</link>
       <pubDate>Thu, 05 May 2016 21:48:51 -0700</pubDate>
       
       <guid>/about/</guid>
-      <description>This is a &amp;ldquo;hello world&amp;rdquo; example website for the blogdown package. The theme was forked from @jrutheiser/hugo-lithium-theme and modified by Yihui Xie.</description>
+      <description>Welcome to Martin Herz&amp;rsquo;s R Blog and his travels into sports and R!</description>
     </item>
     
   </channel>
